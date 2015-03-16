@@ -113,6 +113,8 @@ class Alarm
                 return $speaker;
             }
         }
+
+        throw new \RuntimeException("Unable to find a speaker for this alarm");
     }
 
 
@@ -175,7 +177,7 @@ class Alarm
     public function getDuration()
     {
         list($hours, $minutes) = explode(":", $this->attributes["Duration"]);
-        return ($hours * 60) + $minutes;
+        return (int) ($hours * 60) + $minutes;
     }
 
 
@@ -503,14 +505,51 @@ class Alarm
 
 
     /**
+     * Get a particular PlayMode.
+     *
+     * @param string $type The play mode attribute to get
+     *
+     * @return boolean
+     */
+    protected function getPlayMode($type)
+    {
+        $mode = Helper::getMode($this->attributes["PlayMode"]);
+        return $mode[$type];
+    }
+
+
+    /**
+     * Set a particular PlayMode.
+     *
+     * @param string $type The play mode attribute to update
+     * @param boolean $value The value to set the attribute to
+     *
+     * @return static
+     */
+    protected function setPlayMode($type, $value)
+    {
+        $value = (boolean) $value;
+
+        $mode = Helper::getMode($this->attributes["PlayMode"]);
+        if ($mode[$type] === $value) {
+            return $this;
+        }
+
+        $mode[$type] = $value;
+        $this->attributes["PlayMode"] = Helper::setMode($mode);
+
+        return $this->save();
+    }
+
+
+    /**
      * Check if repeat is active.
      *
      * @return boolean
      */
     public function getRepeat()
     {
-        $mode = Helper::getMode($this->attributes["PlayMode"]);
-        return $mode["repeat"];
+        $this->getPlayMode("repeat");
     }
 
 
@@ -523,17 +562,7 @@ class Alarm
      */
     public function setRepeat($repeat)
     {
-        $repeat = (boolean) $repeat;
-
-        $mode = Helper::getMode($this->attributes["PlayMode"]);
-        if ($mode["repeat"] === $repeat) {
-            return;
-        }
-
-        $mode["repeat"] = $repeat;
-        $this->attributes["PlayMode"] = Helper::setMode($mode);
-
-        return $this->save();
+        return $this->setPlayMode("repeat", $repeat);
     }
 
 
@@ -544,31 +573,20 @@ class Alarm
      */
     public function getShuffle()
     {
-        $mode = Helper::getMode($this->attributes["PlayMode"]);
-        return $mode["shuffle"];
+        $this->getPlayMode("shuffle");
     }
 
 
     /**
      * Turn shuffle mode on or off.
      *
-     * @param boolean $repeat Whether repeat should be on or not
+     * @param boolean $shuffle Whether shuffle should be on or not
      *
      * @return static
      */
     public function setShuffle($shuffle)
     {
-        $shuffle = (boolean) $shuffle;
-
-        $mode = Helper::getMode($this->attributes["PlayMode"]);
-        if ($mode["shuffle"] === $shuffle) {
-            return;
-        }
-
-        $mode["shuffle"] = $shuffle;
-        $this->attributes["PlayMode"] = Helper::setMode($mode);
-
-        return $this->save();
+        return $this->setPlayMode("shuffle", $shuffle);
     }
 
 

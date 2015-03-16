@@ -174,7 +174,7 @@ class Controller extends Speaker
             case self::STATE_STOPPED;
                 return $this->pause();
         }
-        throw new \InvalidArgumentException("Unknown state (" . $state . ")");
+        throw new \InvalidArgumentException("Unknown state: {$state})");
     }
 
 
@@ -404,14 +404,51 @@ class Controller extends Speaker
 
 
     /**
+     * Get a particular PlayMode.
+     *
+     * @param string $type The play mode attribute to get
+     *
+     * @return boolean
+     */
+    protected function getPlayMode($type)
+    {
+        $mode = $this->getMode();
+        return $mode[$type];
+    }
+
+
+    /**
+     * Set a particular PlayMode.
+     *
+     * @param string $type The play mode attribute to update
+     * @param boolean $value The value to set the attribute to
+     *
+     * @return static
+     */
+    protected function setPlayMode($type, $value)
+    {
+        $value = (boolean) $value;
+
+        $mode = $this->getMode();
+        if ($mode[$type] === $value) {
+            return $this;
+        }
+
+        $mode[$type] = $value;
+        $this->setMode($mode);
+
+        return $this;
+    }
+
+
+    /**
      * Check if repeat is currently active.
      *
      * @return boolean
      */
     public function getRepeat()
     {
-        $mode = $this->getMode();
-        return $mode["repeat"];
+        $this->getPlayMode("repeat");
     }
 
 
@@ -424,17 +461,7 @@ class Controller extends Speaker
      */
     public function setRepeat($repeat)
     {
-        $repeat = (boolean) $repeat;
-
-        $mode = $this->getMode();
-        if ($mode["repeat"] === $repeat) {
-            return $this;
-        }
-
-        $mode["repeat"] = $repeat;
-        $this->setMode($mode);
-
-        return $this;
+        return $this->setPlayMode("repeat", $repeat);
     }
 
 
@@ -445,8 +472,7 @@ class Controller extends Speaker
      */
     public function getShuffle()
     {
-        $mode = $this->getMode();
-        return $mode["shuffle"];
+        $this->getPlayMode("shuffle");
     }
 
 
@@ -459,17 +485,7 @@ class Controller extends Speaker
      */
     public function setShuffle($shuffle)
     {
-        $shuffle = (boolean) $shuffle;
-
-        $mode = $this->getMode();
-        if ($mode["shuffle"] === $shuffle) {
-            return $this;
-        }
-
-        $mode["shuffle"] = $shuffle;
-        $this->setMode($mode);
-
-        return $this;
+        return $this->setPlayMode("shuffle", $shuffle);
     }
 
 
@@ -493,7 +509,7 @@ class Controller extends Speaker
      */
     public function setCrossfade($crossfade)
     {
-        $data = $this->soap("AVTransport", "SetCrossfadeMode", [
+        $this->soap("AVTransport", "SetCrossfadeMode", [
             "CrossfadeMode" =>  (boolean) $crossfade,
         ]);
 

@@ -36,7 +36,7 @@ class Queue implements \Countable
     public function __construct(Controller $controller)
     {
         $this->id = "Q:0";
-        $this->updateId = false;
+        $this->updateId = 0;
         $this->controller = $controller;
     }
 
@@ -146,6 +146,43 @@ class Queue implements \Countable
     }
 
 
+    protected function getNextPosition()
+    {
+        $data = $this->browse("DirectChildren");
+
+        $this->updateId = $data["UpdateID"];
+
+        return $data["TotalMatches"] + 1;
+    }
+
+
+    /**
+     * Add a uri to the queue.
+     *
+     * @param UriInterface $track The track to add
+     * @param int $position The position to insert the track in the queue (zero-based), by default the track will be added to the end of the queue
+     *
+     * @return boolean
+     */
+    protected function addUri(UriInterface $track, $position = null)
+    {
+        if ($position === null) {
+            $position = $this->getNextPosition();
+        }
+
+        $data = $this->soap("AVTransport", "AddURIToQueue", [
+            "UpdateID"                          =>  $this->updateId,
+            "EnqueuedURI"                       =>  $track->getUri(),
+            "EnqueuedURIMetaData"               =>  $track->getMetaData(),
+            "DesiredFirstTrackNumberEnqueued"   =>  $position,
+            "EnqueueAsNext"                     =>  0,
+        ]);
+        $this->updateId++;
+
+        return ($data["NumTracksAdded"] == 1);
+    }
+
+
     /**
      * Add a track to the queue.
      *
@@ -171,9 +208,7 @@ class Queue implements \Countable
     public function addTracks(array $tracks, $position = null)
     {
         if ($position === null) {
-            $data = $this->browse("DirectChildren");
-            $this->updateId = $data["UpdateID"];
-            $position = $data["TotalMatches"] + 1;
+            $position = $this->getNextPosition();
         }
 
         # Ensure the update id is set to begin with
@@ -190,16 +225,7 @@ class Queue implements \Countable
                 throw new \InvalidArgumentException("The addTracks() array must contain either string URIs or objects that implement \duncan3dc\Sonos\Tracks\UriInterface");
             }
 
-            $data = $this->soap("AVTransport", "AddURIToQueue", [
-                "UpdateID"                          =>  $this->updateId,
-                "EnqueuedURI"                       =>  $track->getUri(),
-                "EnqueuedURIMetaData"               =>  $track->getMetaData(),
-                "DesiredFirstTrackNumberEnqueued"   =>  $position++,
-                "EnqueueAsNext"                     =>  0,
-            ]);
-            $this->updateId++;
-
-            if ($data["NumTracksAdded"] != 1) {
+            if (!$this->addUri($track, $position++)) {
                 return false;
             }
         }
